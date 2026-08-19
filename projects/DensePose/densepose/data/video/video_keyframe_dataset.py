@@ -16,6 +16,9 @@ from detectron2.utils.file_io import PathManager
 from ..utils import maybe_prepend_base_path
 from .frame_selector import FrameSelector, FrameTsList
 
+# pyre-fixme[16]: Module `av` has no attribute `AVError`.
+_AVError = getattr(av, "AVError", OSError)
+
 FrameList = List[av.frame.Frame]  # pyre-ignore[16]
 FrameTransform = Callable[[torch.Tensor], torch.Tensor]
 
@@ -46,7 +49,7 @@ def list_keyframes(video_fpath: str, video_stream_idx: int = 0) -> FrameTsList:
             while True:
                 try:
                     container.seek(pts + 1, backward=False, any_frame=False, stream=stream)
-                except av.AVError as e:
+                except _AVError as e:
                     # the exception occurs when the video length is exceeded,
                     # we then return whatever data we've already collected
                     logger = logging.getLogger(__name__)
@@ -121,7 +124,7 @@ def read_keyframes(
                     container.seek(pts, any_frame=False, stream=stream)
                     frame = next(container.decode(video=0))
                     frames.append(frame)
-                except av.AVError as e:
+                except _AVError as e:
                     logger = logging.getLogger(__name__)
                     logger.warning(
                         f"Read keyframes: Error seeking video file {video_fpath}, "
@@ -251,6 +254,7 @@ class VideoKeyframeDataset(Dataset):
         if type(category_list) is list:
             self.category_list = category_list
         else:
+            # pyrefly: ignore [bad-assignment]
             self.category_list = [category_list] * len(video_list)
         assert len(video_list) == len(
             self.category_list
@@ -264,6 +268,7 @@ class VideoKeyframeDataset(Dataset):
             else None
         )
 
+    # pyrefly: ignore [bad-override-param-name]
     def __getitem__(self, idx: int) -> Dict[str, Any]:
         """
         Gets selected keyframes from a given video
